@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools" , "wheel"]
+
+[project]
+name = "mlpkg"
+version = "0.1.0"
+authors = [
+    {name = "chandra shekar"}
+]
+description = "A simple ml lib from scratch"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+dependencies = []
+
