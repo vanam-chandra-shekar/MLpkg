@@ -8,6 +8,7 @@ class Value():
         self.grad = 0
 
         self._backward = lambda : None
+        self._forward = lambda : None
     
     def __repr__(self):
         return f"Value(data={self.data})"
@@ -19,46 +20,54 @@ class Value():
         elif isinstance(other , (int, float)):
             return Value(data=float(other))
         else:
-            raise TypeError(f"Unsupported type: {type(other)}; expected int or float.")
+            return None
 
 
     def __add__(self , other):
         other = self._coercion(other)
+
+        if (other is None ) : return NotImplemented
 
         out = Value(self.data + other.data , _children=(self , other) , _op = '+')
 
         def _backward():
             self.grad += 1.0 * out.grad
             other.grad += 1.0 * out.grad
-
+        
+        def _forward():
+            out.data = self.data + other.data
+        
+        out._forward = _forward
         out._backward = _backward
 
         return out
 
     def __radd__(self , other):
-        other = self._coercion(other)
 
         return other + self
 
     def __mul__(self , other):
         other = self._coercion(other)
 
+        if (other is None ) : return NotImplemented
+
         out = Value(self.data * other.data , _children=(self , other) , _op = '*')
 
         def _backward():
             self.grad += other.data * out.grad
             other.grad += self.data * out.grad
-
-        self._backward = _backward
+        
+        def _forward():
+            out.data = self.data * other.data
+        
+        out._forward  = _forward
+        out._backward = _backward
 
         return out
 
     def __rmul__(self , other):
-        other = self._coercion(other)
 
         return other * self
-
-
 
     def __pow__(self , k):
         if not isinstance(k , (int , float)):
@@ -68,8 +77,12 @@ class Value():
 
         def _backward():
             self.grad += k * (self.data ** (k-1)) * out.grad 
+        
+        def _forward():
+            out.data = self.data ** k
 
-        self._backward = _backward
+        out._forward = _forward
+        out._backward = _backward
         
         return out
 
@@ -116,9 +129,16 @@ class Value():
         for node in reversed(topo_order):
             node._backward()
     
-    def reset_grads(self):
+    def zero_grads(self):
 
-        self.grad = 0.0
+        topo_order = self._topological_sort(self)
 
-        for child in self._children:
-            child.reset_grads()
+        for node in topo_order:
+            node.grad = 0.0
+    
+    def forward(self):
+
+        topo_order = self._topological_sort(self)
+
+        for node in topo_order:
+            node._forward()
